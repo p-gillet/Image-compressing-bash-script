@@ -1,0 +1,1 @@
+# Image-compressing-bash-script
