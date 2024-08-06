@@ -1,8 +1,6 @@
 #!/bin/bash
 # This script recursively compresses jpg and png files to jpg files using "mozjpeg" and keeps the original files intact. It reports the sizes of original and compressed images.
 
-#COPYRIGHT: this script is made available under the Creative Commons CC0 1.0 Universal Public Domain Dedication (https://creativecommons.org/publicdomain/zero/1.0/deed.en). The original creator of this script has no affiliation with "mozjpeg" or "Mozilla".
-
 SOURCE_DIR="."  # Current directory
 DEST_DIR="compressed_directory"  # Destination directory for compressed images
 
