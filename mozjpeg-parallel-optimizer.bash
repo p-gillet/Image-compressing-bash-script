@@ -55,6 +55,8 @@ process_file() {
     mkdir -p "$dest_dir"
 
     S=$(date +%s)
+	
+	# Filename and size saved. If the name has newlines or tabs, they are converted to spaces so the names display well in terminal.
     name="$(stat --printf="%n" "$i" | tr '\n' ' ' | tr '\t' ' ')"
     size="$(stat --printf="%s" "$i")"
 
@@ -63,10 +65,11 @@ process_file() {
     n=$(grep -oE "[0-9]+" "$R0")
     printf "%s\t-dct float -quant-table 1 -nojfif -dc-scan-opt 2" > "$R1" "$n"
 
+	# If optimized size is larger than original size, then file is skipped. Else: other parameters are tested.
     if ((size < n)); then
-        printf "|%9s| |%9s| |%10s| |%4s| |%-62s| |%s|\n" "$size" "skipped" "----" "----" "" "$name"
+        printf "|%9s| |%9s| |%10s| |%4s| |%-62s| |%s|\n" "$size" "-skipped-" "----" "----" "" "$name"
     else
-        # Additional compression simulations
+        # Additional compression parameters
         declare -a params=(
             "-dct float -quant-table 2 -nojfif -dc-scan-opt 2"
             "-dct float -quant-table 3 -nojfif -dc-scan-opt 2"
@@ -94,7 +97,7 @@ process_file() {
             simulate_compression "$i" "$param"
         done
 
-        # Smallest bytesize is found via sort from simulation info. Parameters used to obtain this size are extracted and used in mozjpeg to produce an actual compressed file.
+        # Smallest bytesize is found via sort from the simulation. Parameters used to obtain this size are then extracted and used in mozjpeg to produce an actual compressed file.
         sort -n "$R1" > "$R2"
         par=$(head -n1 "$R2" | cut -f2)
 		compressed_path="${dest_path%.*}_opti.jpg" # Remove the old extension and add _opti.jpg
@@ -125,6 +128,7 @@ process_file() {
         printf "|%9s| |%9s| |%9d%%| |%4s| |%-62s| |%s|\n" "$size" "$compressed_size" "$percent" "$time_spent" "$par" "$name" 
     fi
 
+	# Temp files are removed from RAM.
     rm -f "$R0" "$R1" "$R2"
 }
 
@@ -135,25 +139,27 @@ export file_count_file
 export original_size_total_file
 export compressed_size_total_file
 
+# Print the header
 printf "START:\t%s\n" "$(date)"
 printf "|%9s| |%9s| |%10s| |%s| |%-62s| |%-s|\n" "orig." "now" "% of orig." "sec." "parameters used" "path"
 
 # Main command
 find "$SOURCE_DIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) -print0 | parallel -0 -j "$(nproc)" process_file
 
-# Read the final values from the temporary files
+# Read the final values from the temporary files, calculate elapsed time and size saved with compression
 file_count=$(<"$file_count_file")
 original_size_total=$(<"$original_size_total_file")
 compressed_size_total=$(<"$compressed_size_total_file")
 end_time=$(date +%s)
 total_time=$((end_time - start_time))
+size_reduction_mo=$(echo "scale=2; $((original_size_total - compressed_size_total)) / 1000000" | bc)
 
 # Print the summary
 printf -- '-%.s' {1..58} ; echo
 printf "Total files processed: %d (file that were skipped are not counted !)\n" "$file_count"
 printf "Total original size: %d bytes\n" "$original_size_total"
 printf "Total compressed size: %d bytes\n" "$compressed_size_total"
-printf "Total size reduction: %d Mo\n" $(((original_size_total - compressed_size_total) / 1000000))
+printf "Total size reduction: %.2f Mo\n"  "$size_reduction_mo"
 printf "Total processing time: %d seconds\n" "$total_time"
 printf "All files have been compressed and saved in the '%s' directory.\n" "$DEST_DIR"
 printf "END:\t%s\n" "$(date)"
@@ -161,3 +167,4 @@ printf -- '-%.s' {1..58} ; echo
 
 # Clean up temporary files
 rm -f "$file_count_file" "$original_size_total_file" "$compressed_size_total_file" "$file_count_file.lock"
+
