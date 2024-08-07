@@ -4,6 +4,8 @@
 
 - [Link to the topic](https://www.reddit.com/r/commandline/comments/nxen24/optimize_jpgpng_files_near_losslessly_with/)
 - [Link to the initial script](https://pastebin.com/vfqnSHne)
+- [Link to his v2 script](https://pastebin.com/6EZSjJmQ)
+- [Link to the topic v2](https://www.reddit.com/r/commandline/comments/o0qprw/3098_smaller_jpgpng_files_with_mozjpeg/)
 
 ## Script Overview
 
