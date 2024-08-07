@@ -3,8 +3,9 @@
 
 #COPYRIGHT: this script is made available under the Creative Commons CC0 1.0 Universal Public Domain Dedication (https://creativecommons.org/publicdomain/zero/1.0/deed.en). The original creator of this script has no affiliation with "mozjpeg" or "Mozilla".
 
-SOURCE_DIR="."  # Current directory
-DEST_DIR="compressed_directory"  # Destination directory for compressed images
+SOURCE_DIR="."  # Source directory that contains images to compress
+DEST_DIR="./compressed_directory"  # Destination directory for compressed images
+LOG_FILE="./log.csv" # Destination of the log file
 
 # Initialize counters
 file_count=0
@@ -27,21 +28,21 @@ R2=$(mktemp -p /dev/shm/)
 
 # Function to simulate compression with given parameters and log results
 simulate_compression() {
-    local file=$1
-    local params=$2
+	local file
+	local params
+    file=$1
+    params=$2
+	
     mozjpeg -memdst $params "$file" > "$R0" 2>&1
     n=$(grep -oE "[0-9]+" "$R0")
     printf "\n%s\t%s" "$n" "$params" >> "$R1"
 }
-
-export -f simulate_compression
 
 process_file() {
     local i
 	local R0
     local R1
 	local R2
-	
 	i="$1"
 	R0=$(mktemp -p /dev/shm/)
     R1=$(mktemp -p /dev/shm/)
@@ -68,20 +69,22 @@ process_file() {
 	# If optimized size is larger than original size, then file is skipped. Else: other parameters are tested.
     if ((size < n)); then
         printf "|%9s| |%9s| |%10s| |%4s| |%-62s| |%s|\n" "$size" "-skipped-" "----" "----" "" "$name"
+		# Fill the log file with the file's data
+		echo "${size};-skipped-;----;----;----;${name}" >> log.csv
     else
         # Additional compression parameters
         declare -a params=(
-            "-dct float -quant-table 2 -nojfif -dc-scan-opt 2"
-            "-dct float -quant-table 3 -nojfif -dc-scan-opt 2"
-            "-dct float -tune-ms-ssim -nojfif -dc-scan-opt 2"
-            "-dct float -tune-ms-ssim -quant-table 3 -nojfif -dc-scan-opt 2"
-            "-dct float -tune-ssim -nojfif -dc-scan-opt 2"
-            "-dct float -tune-ssim -quant-table 0 -nojfif -dc-scan-opt 2"
-            "-dct float -tune-ssim -quant-table 1 -nojfif -dc-scan-opt 2"
-            "-dct float -tune-ssim -quant-table 2 -nojfif -dc-scan-opt 2"
-            "-dct float -tune-ssim -quant-table 3 -nojfif -dc-scan-opt 1"
-            "-dct float -tune-ssim -quant-table 3 -nojfif -dc-scan-opt 2"
-            "-dct float -tune-ssim -quant-table 4 -nojfif -dc-scan-opt 2"
+            "-dct int -quant-table 2 -nojfif -dc-scan-opt 2"
+            "-dct int -quant-table 3 -nojfif -dc-scan-opt 2"
+            "-dct int -tune-ms-ssim -nojfif -dc-scan-opt 2"
+            "-dct int -tune-ms-ssim -quant-table 3 -nojfif -dc-scan-opt 2"
+            "-dct int -tune-ssim -nojfif -dc-scan-opt 2"
+            "-dct int -tune-ssim -quant-table 0 -nojfif -dc-scan-opt 2"
+            "-dct int -tune-ssim -quant-table 1 -nojfif -dc-scan-opt 2"
+            "-dct int -tune-ssim -quant-table 2 -nojfif -dc-scan-opt 2"
+            "-dct int -tune-ssim -quant-table 3 -nojfif -dc-scan-opt 1"
+            "-dct int -tune-ssim -quant-table 3 -nojfif -dc-scan-opt 2"
+            "-dct int -tune-ssim -quant-table 4 -nojfif -dc-scan-opt 2"
             "-quant-table 2 -nojfif -dc-scan-opt 1"
             "-quant-table 2 -nojfif -dc-scan-opt 2"
             "-tune-ssim -nojfif -dc-scan-opt 2"
@@ -126,12 +129,15 @@ process_file() {
         E=$(date +%s)
         time_spent=$((E - S))
         printf "|%9s| |%9s| |%9d%%| |%4s| |%-62s| |%s|\n" "$size" "$compressed_size" "$percent" "$time_spent" "$par" "$name" 
+		# Fill the log file with the file's data
+		echo "${size};${compressed_size};${percent};${time_spent};${par};${name}" >> log.csv
     fi
 
 	# Temp files are removed from RAM.
     rm -f "$R0" "$R1" "$R2"
 }
 
+export -f simulate_compression
 export -f process_file
 export SOURCE_DIR
 export DEST_DIR
@@ -143,8 +149,14 @@ export compressed_size_total_file
 printf "START:\t%s\n" "$(date)"
 printf "|%9s| |%9s| |%10s| |%s| |%-62s| |%-s|\n" "orig." "now" "% of orig." "sec." "parameters used" "path"
 
-# Main command
-find "$SOURCE_DIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) -print0 | parallel -0 -j "$(nproc)" process_file
+# Create the log file and append the header if it does not already exist 
+if [ ! -f $LOG_FILE ] 
+then
+    echo "orig.;now;% of orig.;sec.;parameters used;path" >> log.csv
+fi
+
+# Find in the source directory while ignoring the destination directory all JPG/JPEG/PNG. Pipe the result to execute process_file in parallel  
+find "$SOURCE_DIR" -path "$DEST_DIR" -prune -o -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) -print0 | parallel -0 -j "$(nproc)" process_file
 
 # Read the final values from the temporary files, calculate elapsed time and size saved with compression
 file_count=$(<"$file_count_file")
@@ -167,4 +179,3 @@ printf -- '-%.s' {1..58} ; echo
 
 # Clean up temporary files
 rm -f "$file_count_file" "$original_size_total_file" "$compressed_size_total_file" "$file_count_file.lock"
-
