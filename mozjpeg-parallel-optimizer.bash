@@ -28,8 +28,8 @@ R2=$(mktemp -p /dev/shm/)
 
 # Function to simulate compression with given parameters and log results
 simulate_compression() {
-	local file
-	local params
+    local file
+    local params
     file=$1
     params=$2
 	
@@ -40,11 +40,11 @@ simulate_compression() {
 
 process_file() {
     local i
-	local R0
+    local R0
     local R1
-	local R2
-	i="$1"
-	R0=$(mktemp -p /dev/shm/)
+    local R2
+    i="$1"
+    R0=$(mktemp -p /dev/shm/)
     R1=$(mktemp -p /dev/shm/)
     R2=$(mktemp -p /dev/shm/)
 
@@ -57,7 +57,7 @@ process_file() {
 
     S=$(date +%s)
 	
-	# Filename and size saved. If the name has newlines or tabs, they are converted to spaces so the names display well in terminal.
+    # Filename and size saved. If the name has newlines or tabs, they are converted to spaces so the names display well in terminal.
     name="$(stat --printf="%n" "$i" | tr '\n' ' ' | tr '\t' ' ')"
     size="$(stat --printf="%s" "$i")"
 
@@ -69,8 +69,8 @@ process_file() {
 	# If optimized size is larger than original size, then file is skipped. Else: other parameters are tested.
     if ((size < n)); then
         printf "|%9s| |%9s| |%10s| |%4s| |%-62s| |%s|\n" "$size" "-skipped-" "----" "----" "" "$name"
-		# Fill the log file with the file's data
-		echo "${size};-skipped-;----;----;----;${name}" >> log.csv
+	# Fill the log file with the file's data
+	echo "${size};-skipped-;----;----;----;${name}" >> log.csv
     else
         # Additional compression parameters
         declare -a params=(
@@ -103,7 +103,7 @@ process_file() {
         # Smallest bytesize is found via sort from the simulation. Parameters used to obtain this size are then extracted and used in mozjpeg to produce an actual compressed file.
         sort -n "$R1" > "$R2"
         par=$(head -n1 "$R2" | cut -f2)
-		compressed_path="${dest_path%.*}_opti.jpg" # Remove the old extension and add _opti.jpg
+	compressed_path="${dest_path%.*}_opti.jpg" # Remove the old extension and add _opti.jpg
         mozjpeg $par "$i" > "$compressed_path"
 
         # Update counters atomically
@@ -129,11 +129,11 @@ process_file() {
         E=$(date +%s)
         time_spent=$((E - S))
         printf "|%9s| |%9s| |%9d%%| |%4s| |%-62s| |%s|\n" "$size" "$compressed_size" "$percent" "$time_spent" "$par" "$name" 
-		# Fill the log file with the file's data
-		echo "${size};${compressed_size};${percent};${time_spent};${par};${name}" >> log.csv
+	# Fill the log file with the file's data
+	echo "${size};${compressed_size};${percent};${time_spent};${par};${name}" >> log.csv
     fi
 
-	# Temp files are removed from RAM.
+    # Temp files are removed from RAM.
     rm -f "$R0" "$R1" "$R2"
 }
 
