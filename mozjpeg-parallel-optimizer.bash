@@ -1,6 +1,8 @@
 #!/bin/bash
 # This script recursively compresses jpg and png files to jpg files using "mozjpeg" and keeps the original files intact. It reports the sizes of original and compressed images.
 
+#COPYRIGHT: this script is made available under the Creative Commons CC0 1.0 Universal Public Domain Dedication (https://creativecommons.org/publicdomain/zero/1.0/deed.en). The original creator of this script has no affiliation with "mozjpeg" or "Mozilla".
+
 SOURCE_DIR="."  # Current directory
 DEST_DIR="compressed_directory"  # Destination directory for compressed images
 
@@ -62,7 +64,7 @@ process_file() {
     printf "%s\t-dct float -quant-table 1 -nojfif -dc-scan-opt 2" > "$R1" "$n"
 
     if ((size < n)); then
-        printf '%s\n' "$size    ----    skipped     $name"
+        printf "|%9s| |%9s| |%10s| |%4s| |%-62s| |%s|\n" "$size" "skipped" "----" "----" "" "$name"
     else
         # Additional compression simulations
         declare -a params=(
@@ -93,7 +95,7 @@ process_file() {
         done
 
         # Smallest bytesize is found via sort from simulation info. Parameters used to obtain this size are extracted and used in mozjpeg to produce an actual compressed file.
-        parsort -n "$R1" > "$R2"
+        sort -n "$R1" > "$R2"
         par=$(head -n1 "$R2" | cut -f2)
 		compressed_path="${dest_path%.*}_opti.jpg" # Remove the old extension and add _opti.jpg
         mozjpeg $par "$i" > "$compressed_path"
@@ -119,8 +121,8 @@ process_file() {
         # Time spent on processing and compressed vs original size in percentage are calculated and displayed.
         percent=$((200 * compressed_size / size % 2 + 100 * compressed_size / size))
         E=$(date +%s)
-        T=$((E - S))
-        printf "%s    %s  %d%%        %s ($T) %s\n" "$size" "$compressed_size" "$percent" "$name" "$par"
+        time_spent=$((E - S))
+        printf "|%9s| |%9s| |%9d%%| |%4s| |%-62s| |%s|\n" "$size" "$compressed_size" "$percent" "$time_spent" "$par" "$name" 
     fi
 
     rm -f "$R0" "$R1" "$R2"
@@ -134,8 +136,9 @@ export original_size_total_file
 export compressed_size_total_file
 
 printf "START:\t%s\n" "$(date)"
-printf "Size in bytes:\norig.\tnow\t%% of orig.\tname and path (seconds spent processing) parameters used\n"
+printf "|%9s| |%9s| |%10s| |%s| |%-62s| |%-s|\n" "orig." "now" "% of orig." "sec." "parameters used" "path"
 
+# Main command
 find "$SOURCE_DIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) -print0 | parallel -0 -j "$(nproc)" process_file
 
 # Read the final values from the temporary files
