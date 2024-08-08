@@ -69,8 +69,8 @@ process_file() {
 	# If optimized size is larger than original size, then file is skipped. Else: other parameters are tested.
     if ((size < n)); then
         printf "|%9s| |%9s| |%10s| |%4s| |%-62s| |%s|\n" "$size" "-skipped-" "----" "----" "" "$name"
-	# Fill the log file with the file's data
-	echo "${size};-skipped-;----;----;----;${name}" >> log.csv
+		# Fill the log file with the file's data
+		echo "${size};-skipped-;----;----;----;${name}" >> "$LOG_FILE"
     else
         # Additional compression parameters
         declare -a params=(
@@ -103,7 +103,7 @@ process_file() {
         # Smallest bytesize is found via sort from the simulation. Parameters used to obtain this size are then extracted and used in mozjpeg to produce an actual compressed file.
         sort -n "$R1" > "$R2"
         par=$(head -n1 "$R2" | cut -f2)
-	compressed_path="${dest_path%.*}_opti.jpg" # Remove the old extension and add _opti.jpg
+		compressed_path="${dest_path%.*}_opti.jpg" # Remove the old extension and add _opti.jpg
         mozjpeg $par "$i" > "$compressed_path"
 
         # Update counters atomically
@@ -129,8 +129,8 @@ process_file() {
         E=$(date +%s)
         time_spent=$((E - S))
         printf "|%9s| |%9s| |%9d%%| |%4s| |%-62s| |%s|\n" "$size" "$compressed_size" "$percent" "$time_spent" "$par" "$name" 
-	# Fill the log file with the file's data
-	echo "${size};${compressed_size};${percent};${time_spent};${par};${name}" >> log.csv
+		# Fill the log file with the file's data
+		echo "${size};${compressed_size};${percent};${time_spent};${par};${name}" >> "$LOG_FILE"
     fi
 
     # Temp files are removed from RAM.
@@ -141,6 +141,7 @@ export -f simulate_compression
 export -f process_file
 export SOURCE_DIR
 export DEST_DIR
+export LOG_FILE
 export file_count_file
 export original_size_total_file
 export compressed_size_total_file
@@ -152,11 +153,11 @@ printf "|%9s| |%9s| |%10s| |%s| |%-62s| |%-s|\n" "orig." "now" "% of orig." "sec
 # Create the log file and append the header if it does not already exist 
 if [ ! -f $LOG_FILE ] 
 then
-    echo "orig.;now;% of orig.;sec.;parameters used;path" >> log.csv
+    echo "orig.;now;% of orig.;sec.;parameters used;path" >> "$LOG_FILE"
 fi
 
 # Find in the source directory while ignoring the destination directory all JPG/JPEG/PNG. Pipe the result to execute process_file in parallel  
-find "$SOURCE_DIR" -path "$DEST_DIR" -prune -o -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) -print0 | parallel -0 -j "$(nproc)" process_file
+find "$SOURCE_DIR" -path "$DEST_DIR" -prune -o -type f \( ! -iname '*_opti.jpg' -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) -print0 | parallel -0 -j "$(nproc)" process_file
 
 # Read the final values from the temporary files, calculate elapsed time and size saved with compression
 file_count=$(<"$file_count_file")
