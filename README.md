@@ -7,6 +7,13 @@
 - [Link to his v2 script](https://pastebin.com/6EZSjJmQ)
 - [Link to the topic v2](https://www.reddit.com/r/commandline/comments/o0qprw/3098_smaller_jpgpng_files_with_mozjpeg/)
 
+## Dependencies
+
+To use this script you will need the following package installed and fully working :
+   - [mozjpeg](https://github.com/mozilla/mozjpeg)
+   - [GNU parallel](https://www.gnu.org/software/parallel/)
+   - [GNU bc](https://www.gnu.org/software/bc/)
+
 ## Script Overview
 
 This Bash script is designed to compress JPG and PNG files into optimized JPG files using the `mozjpeg` tool. It processes files in a way that keeps the original images intact and provides detailed reports on the sizes of both the original and the compressed images. The script also runs tasks in parallel to speed up the process, taking advantage of multiple CPU cores.
